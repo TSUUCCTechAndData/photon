@@ -1,65 +1,74 @@
 #' @title Launch an RStudio addin to build ShinyApp using Electron Framework
-#'
+#' @import shiny
+#' @import miniUI
+#' @import shinyFiles
 #' @export
 #'
 
 
 photon_rstudioaddin <- function(RscriptRepository = NULL) {
-  requireNamespace("shiny")
-  requireNamespace("miniUI")
-  requireNamespace("shinyFiles")
-  
-  
+
   ui <- miniUI::miniPage(
     # Shiny fileinput resethandler
-    
-    miniUI::gadgetTitleBar("Use Photon to Build Standalone Shiny Apps",
-                           left = NULL, right = NULL),
-    
+
+    miniUI::gadgetTitleBar("Use photon to build your shiny app"),
+
     miniUI::miniTabstripPanel(
       #miniUI::miniTabPanel(
       #title = 'Build standalone Shiny App for first time',
       #icon = shiny::icon("cloud-upload"),
       miniUI::miniContentPanel(
-        shiny::h4("Shiny App Directory:"),
-        fillRow(flex = c(1, 3),
-                 shinyFiles::shinyDirButton('dirSelect', label = 'Select directory',
+        shiny::h4("Choose your Shiny App directory"),
+        shinyFiles::shinyDirButton('dirSelect',
+                                   label = 'Select directory',
                                    title = 'Choose your Shiny App directory'),
-                 shiny::verbatimTextOutput('currentdirselected')
+        shiny::br(),
+        shiny::br(),
+        shiny::fillRow(
+          flex = c(3, 3),
+          shiny::column(
+            3,
+            shiny::div(class = "control-label",
+                       shiny::strong("Selected Rscript")),
+            shiny::verbatimTextOutput('currentdirselected'),
+            shiny::dateInput(
+              'date',
+              label = "Creation date:",
+              startview = "month",
+              weekstart = 1,
+              min = Sys.Date()
+            ),
+            shiny::textInput('rscript_args',
+                             label = "Additional arguments to Rscript", 
+                             value = ""),
+            shiny::textInput('rscript_repository', 
+                             label = "Rscript repository path: launch & log location",
+                             value =NULL),
+            shiny::actionButton('create', "Create job", icon = shiny::icon("play-circle"))
           ),
-        shiny::br(),
-        shiny::br(),
-        shiny::h4("CRAN Packages:"),
-        shiny::textInput('cran_packages',
-                         label = ("ex: mgcv,matrixStats"),
-                         value = "NULL"),
-        shiny::br(),
+          shiny::column(
+            3,
+            shiny::textInput('jobdescription', 
+                             label = "Job description",
+                             value = "Photons light up!"),
+            shiny::textInput('cran_packages',
+                             label = "CRAN package (ex. mgcv,matrixStats)",
+                             value = "NULL"),
+            shiny::textInput('github_packages', 
+                             label = "GitHub packages (ex. thomasp85/patchwork)",
+                             value = "NULL"),
 
-        shinyBS::bsCollapse(id = "adv", open = NULL,
-          shinyBS::bsCollapsePanel(
-            shiny::tags$b("> Click for Advanced Options"), NULL,
-            shiny::textInput('github_packages',
-                               label = "GitHub packages (ex. thomasp85/patchwork):",
-                               value = "NULL", width = "100%"),
+            shiny::textInput('bioc_packages', 
+                             label = "Bioconductor packages (ex. SummarizedExperiemnt,VariantAnnotation)",
+                             value = "NULL")
 
-              shiny::textInput('bioc_packages',
-                               label = "Bioconductor packages (ex. SummarizedExperiment,VariantAnnotation):",
-                               value = "NULL", width = "100%")
-             
-                   # shiny::textInput('rscript_args',
-                   #                  label = "Additional arguments to Rscript",
-                   #                  value = ""),
-                   # shiny::textInput('rscript_repository',
-                   #                  label = "R script repository path: launch & log location",
-                   #              value =NULL, width = "100%")))
-       
-        )))),
-      miniUI::miniButtonBlock(
-        actionButton("create", "Build", icon("play-circle"),
-                     style="color: #fff; background-color: #337ab7; border-color: #2e6da4")
+          )
+        )
       )
+    )
+
   )
-  
+
   # Server code for the gadget.
   server <- function(input, output, session) {
     volumes <- c(
@@ -80,17 +89,10 @@ photon_rstudioaddin <- function(RscriptRepository = NULL) {
       })
     output$currentdirselected <-
       shiny::renderText({
-        req(input$dirSelect)
-        
-        print(paste("Selected directory:", 
-                     as.character(shinyFiles::parseDirPath(volumes, input$dirSelect))))
+        as.character(shinyFiles::parseDirPath(volumes, input$dirSelect))
       })
-    
-    observeEvent(input$coll, ({
-      shinyBS::updateCollapse(session, "adv", open = "Advanced Options")
-    }))
-    
-    
+
+
     ###########################
     # CREATE / OVERWRITE
     ###########################
@@ -128,4 +130,3 @@ photon_rstudioaddin <- function(RscriptRepository = NULL) {
   #viewer <- shiny::paneViewer()
   shiny::runGadget(ui, server, viewer = viewer)
 }
-
